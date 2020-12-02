@@ -4,6 +4,7 @@ import 'package:to_do_app/todo.dart';
 
 class MainModel extends ChangeNotifier {
   List<Todo> todoList = [];
+  String newTodoText = '';
 
   Future getTodoList() async {
     final snapshot =
@@ -24,5 +25,36 @@ class MainModel extends ChangeNotifier {
       this.todoList = todoList;
       notifyListeners();
     });
+  }
+
+  Future add() async {
+    final collection = FirebaseFirestore.instance.collection('todoList');
+    await collection.add({
+      'title': newTodoText,
+      'createdAt': Timestamp.now(),
+    });
+  }
+
+  void reload() {
+    notifyListeners();
+  }
+
+  Future deleteCheckedItems() async {
+    final checkedItems = todoList.where((todo) => todo.isDone).toList();
+    final references =
+        checkedItems.map((todo) => todo.documentReference).toList();
+
+    final batch = FirebaseFirestore.instance.batch();
+
+    references.forEach((reference) {
+      batch.delete(reference);
+    });
+
+    return batch.commit();
+  }
+
+  bool checkShouldActiveCompleteButton() {
+    final checkedItems = todoList.where((todo) => todo.isDone).toList();
+    return checkedItems.length > 0;
   }
 }
